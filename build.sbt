@@ -15,11 +15,3 @@ libraryDependencies ++= Seq(
 scalacOptions ++= Seq("-feature", "-language:postfixOps")
 
 initialCommands := "import com.traversalsoftware.runway._"
-
-libraryDependencies += "play" % "play" % "2.1.3"
-
-libraryDependencies += "play" % "play-iteratees_2.10" % "2.1.3"
-
-libraryDependencies += "org.reactivemongo" %% "play2-reactivemongo" % "0.9"
-
-libraryDependencies += "org.mockito" % "mockito-core" % "1.9.5"
