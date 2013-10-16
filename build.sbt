@@ -8,6 +8,8 @@ version := "0.1.0"
 
 scalaVersion := "2.10.0"
 
+resolvers += "Typesafe repository releases" at "http://repo.typesafe.com/typesafe/releases/"
+
 libraryDependencies ++= Seq(
 	"play" % "play" % "2.1.3",
 	"play" % "play-iteratees_2.10" % "2.1.3",
