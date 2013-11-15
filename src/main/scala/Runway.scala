@@ -69,8 +69,8 @@ sealed abstract class Direction
 case class Foward() extends Direction
 case class Backward() extends Direction
 
-class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, dummy: B) {
-  
+class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, dummy: B)(implicit readsA: Reads[A], writesA: Writes[A], readsB: Reads[B], writesB: Writes[B]) {
+
   var relationshipEvents: Map[String, (A, B) => Unit] = Map empty
 
   def on(trigger: String, action: ((A, B) => Unit)) = {
@@ -95,7 +95,7 @@ class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, 
     def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
 
     val cursor: Cursor[JsObject] = collection.
-        find(Json.obj("from" -> Json.toJson(o().getId))).
+        find(Json.obj("from" -> Json.toJson(o().id))).
         cursor[JsObject]
 
       val related: Future[List[JsObject]] = cursor.toList
@@ -109,7 +109,7 @@ class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, 
     def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
 
     val cursor: Cursor[JsObject] = collection.
-        find(Json.obj("to" -> Json.toJson(o().getId))).
+        find(Json.obj("to" -> Json.toJson(o().id))).
         cursor[JsObject]
 
       val related: Future[List[JsObject]] = cursor.toList
@@ -123,7 +123,7 @@ class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, 
     def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
 
     val cursor: Cursor[JsObject] = collection.
-        find(Json.obj("from" -> Json.toJson(o().getId), "to" -> Json.toJson(target))).
+        find(Json.obj("from" -> Json.toJson(o().id), "to" -> Json.toJson(target))).
         cursor[JsObject]
 
     val related: Future[List[JsObject]] = cursor.toList
@@ -139,7 +139,7 @@ class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, 
       case None => {}
     }
     def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
-    val json = Json.obj("from" -> o().getId, "to" -> toAttach().getId)
+    val json = Json.obj("from" -> o().id, "to" -> toAttach().id)
     collection.save(json)
   }
 
@@ -155,21 +155,21 @@ class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, 
       case None => {}
     }
     def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
-    val json = Json.obj("from" -> o().getId, "to" -> toAttachId)
+    val json = Json.obj("from" -> o().id, "to" -> toAttachId)
     collection.save(json)
   }
 
 
   def detach(toDetach: B) = {
     def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
-    val json = Json.obj("from" -> o().getId, "to" -> toDetach().getId)
+    val json = Json.obj("from" -> o().id, "to" -> toDetach().id)
     collection.remove(json)
   }
 
 
   def detach(toDetachId: String) = {
     def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
-    val json = Json.obj("from" -> o().getId, "to" -> toDetachId)
+    val json = Json.obj("from" -> o().id, "to" -> toDetachId)
     collection.remove(json)
   }
 
@@ -184,12 +184,31 @@ class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, 
 
 class ModelNotFoundException(id: String) extends RuntimeException(id)
 
-trait RunwayModel[T]{ self: {def getModel: {def jsonReads(p: JsValue): T; def jsonWrites: JsValue; def getId: String}} =>
-  val tool = new Stylist[T](getModel)
 
-  var elegantEvents: Map[String, ({def jsonReads(p: JsValue): T; def jsonWrites: JsValue; def getId: String}) => Unit] = Map empty
+trait RunwayModel[T]{ self: T =>
 
-  def on(trigger: String, action: ({def jsonReads(p: JsValue): T; def jsonWrites: JsValue; def getId: String}) => Unit) = {
+  protected case class Wrapper(implicit reads: Reads[T], writes: Writes[T])
+  val implWrapper: Wrapper
+
+  import implWrapper._
+
+  def jsonReads(p: JsValue)(implicit reads: Reads[T]): T = {
+    p.as[T]
+  }
+
+  def jsonWrites(implicit writes: Writes[T]): JsValue = {
+    Json.toJson(self)
+  }
+
+  val id: String
+
+  def getModel = self
+
+  def tool(implicit reads: Reads[T], writes: Writes[T]) = new Stylist[T](getModel)
+
+  var elegantEvents: Map[String, (RunwayModel[T] with T) => Unit] = Map empty
+
+  def on(trigger: String, action: (RunwayModel[T] with T) => Unit) = {
     elegantEvents = elegantEvents.updated(trigger, action);
   }
 
@@ -199,7 +218,7 @@ trait RunwayModel[T]{ self: {def getModel: {def jsonReads(p: JsValue): T; def js
 
   def allQuery = tool.allQuery
 
-  def find(id: String) = {
+  def find(id: String)(implicit reads: Reads[T], writes: Writes[T]) = {
     tool.find(id: String)
   }
   
@@ -212,22 +231,29 @@ trait RunwayModel[T]{ self: {def getModel: {def jsonReads(p: JsValue): T; def js
     })
   }
 
-  def find(ids: List[String]) = tool.find(ids: List[String])
+  def find(ids: List[String])(implicit reads: Reads[T], writes: Writes[T]) = tool.find(ids: List[String])
   
   def save() { 
     elegantEvents.get("save") match {
-      case Some(event) => event(self.getModel)
+      case Some(event) => event(getModel)
       case None => {}
     }
-    tool.save(self.getModel.getId)
+    tool.save(getModel.id)
   }
 
   def where(field: String, value: JsValue) = tool.where(field: String, value: JsValue)
 }
 
-trait RunwayModelCompanion[T] extends RunwayModel[T] { self: {def getModel: {def jsonReads(p: JsValue): T; def jsonWrites: JsValue; def getId: String}} =>
-  override val tool = new Stylist[T](self.getModel, getSlug)
-  
+trait RunwayModelCompanion[T] { self: {def getModel: T with RunwayModel[T]} =>
+
+  protected case class Wrapper(implicit reads: Reads[T], writes: Writes[T])
+  val implWrapper: Wrapper
+
+  import implWrapper._
+
+
+  val tool = new Stylist[T](self.getModel, getSlug)
+
   def getSlug = {
     val temp = self.getClass.getSimpleName
     if (temp.last == '$') {
@@ -237,10 +263,8 @@ trait RunwayModelCompanion[T] extends RunwayModel[T] { self: {def getModel: {def
     }
   }
 
-  override def save() = throw new UnsupportedOperationException()
-  
-  def save(toSave: {def jsonReads(p: JsValue): T; def jsonWrites: JsValue; def getId: String}) { 
+  def save(toSave: T with RunwayModel[T]) {
     val tool = new Stylist[T](toSave)
-    tool.save(toSave.getId)
+    tool.save(toSave.id)
   }
 }

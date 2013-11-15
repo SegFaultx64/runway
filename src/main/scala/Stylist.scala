@@ -25,7 +25,7 @@ class DbBehavior {
 	lazy val db = ReactiveMongoPlugin.db
 }
 
-class Stylist[T](a: {def jsonReads(p: JsValue): T; def jsonWrites: JsValue}, preSlug: String = "", dbGen: DbBehavior = new DbBehavior()) {
+class Stylist[T](a: T with RunwayModel[T], preSlug: String = "", dbGen: DbBehavior = new DbBehavior())(implicit reads: Reads[T], writes: Writes[T]) {
   lazy val db = dbGen.db
 
   def slug = {

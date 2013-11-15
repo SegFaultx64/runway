@@ -13,7 +13,7 @@ libraryDependencies ++= Seq(
 	"org.mockito" % "mockito-core" % "1.9.5",
 	"org.specs2" %% "specs2" % "2.2.3" % "test"
 )
-     
+
 scalacOptions ++= Seq("-feature", "-language:postfixOps")
 
 initialCommands := "import com.traversalsoftware.runway._"
