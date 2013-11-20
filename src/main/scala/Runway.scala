@@ -184,35 +184,14 @@ class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, 
 
 class ModelNotFoundException(id: String) extends RuntimeException(id)
 
-
-trait RunwayModel[T]{ self: T =>
-
-  protected case class Wrapper(implicit reads: Reads[T], writes: Writes[T])
-  val implWrapper: Wrapper
-
-  import implWrapper._
-
-  def jsonReads(p: JsValue)(implicit reads: Reads[T]): T = {
-    p.as[T]
-  }
-
-  def jsonWrites(implicit writes: Writes[T]): JsValue = {
-    Json.toJson(self)
-  }
-
+trait Jsonable[T] extends Runnable[T]{
+  def jsonReads(p: JsValue): T
+  def jsonWrites(): JsValue
   val id: String
+}
 
-  def getModel = self
-
-  def tool(implicit reads: Reads[T], writes: Writes[T]) = new Stylist[T](getModel)
-
-  var elegantEvents: Map[String, (RunwayModel[T] with T) => Unit] = Map empty
-
-  def on(trigger: String, action: (RunwayModel[T] with T) => Unit) = {
-    elegantEvents = elegantEvents.updated(trigger, action);
-  }
-
-  def apply() = self.getModel
+trait Runnable[T] {
+  val tool: Stylist[T]
 
   def all = tool.all
 
@@ -221,7 +200,7 @@ trait RunwayModel[T]{ self: T =>
   def find(id: String)(implicit reads: Reads[T], writes: Writes[T]) = {
     tool.find(id: String)
   }
-  
+
   def findOrFail(id: String): Future[Option[T]] = {
     tool.find(id: String).map(f => {
       f match {
@@ -232,25 +211,34 @@ trait RunwayModel[T]{ self: T =>
   }
 
   def find(ids: List[String])(implicit reads: Reads[T], writes: Writes[T]) = tool.find(ids: List[String])
-  
-  def save() { 
+
+  def where(field: String, value: JsValue) = tool.where(field: String, value: JsValue)
+}
+
+trait RunwayModel[T] extends Jsonable[T]{ self: T =>
+
+  def getModel = self
+
+  val tool = new Stylist[T](getModel)
+
+  var elegantEvents: Map[String, (RunwayModel[T] with T) => Unit] = Map empty
+
+  def on(trigger: String, action: (RunwayModel[T] with T) => Unit) = {
+    elegantEvents = elegantEvents.updated(trigger, action);
+  }
+
+  def apply() = self.getModel
+
+  def save() {
     elegantEvents.get("save") match {
       case Some(event) => event(getModel)
       case None => {}
     }
     tool.save(getModel.id)
   }
-
-  def where(field: String, value: JsValue) = tool.where(field: String, value: JsValue)
 }
 
-trait RunwayModelCompanion[T] { self: {def getModel: T with RunwayModel[T]} =>
-
-  protected case class Wrapper(implicit reads: Reads[T], writes: Writes[T])
-  val implWrapper: Wrapper
-
-  import implWrapper._
-
+trait RunwayModelCompanion[T] extends Runnable[T] { self: {def getModel: T with RunwayModel[T]} =>
 
   val tool = new Stylist[T](self.getModel, getSlug)
 
@@ -267,4 +255,5 @@ trait RunwayModelCompanion[T] { self: {def getModel: T with RunwayModel[T]} =>
     val tool = new Stylist[T](toSave)
     tool.save(toSave.id)
   }
+
 }

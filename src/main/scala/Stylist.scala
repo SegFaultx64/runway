@@ -25,7 +25,7 @@ class DbBehavior {
 	lazy val db = ReactiveMongoPlugin.db
 }
 
-class Stylist[T](a: T with RunwayModel[T], preSlug: String = "", dbGen: DbBehavior = new DbBehavior())(implicit reads: Reads[T], writes: Writes[T]) {
+class Stylist[T](a: T with RunwayModel[T], preSlug: String = "", dbGen: DbBehavior = new DbBehavior()) {
   lazy val db = dbGen.db
 
   def slug = {
@@ -42,7 +42,7 @@ class Stylist[T](a: T with RunwayModel[T], preSlug: String = "", dbGen: DbBehavi
   }
 
   def find(id: String): Future[Option[T]] = {
-    
+
     def collection: JSONCollection = db.collection[JSONCollection](slug)
 
     val cursor: Cursor[JsObject] = collection.
@@ -58,7 +58,7 @@ class Stylist[T](a: T with RunwayModel[T], preSlug: String = "", dbGen: DbBehavi
   }
 
   def find(ids: List[String]): Future[List[T]] = {
-    
+
     def collection: JSONCollection = db.collection[JSONCollection](slug)
 
     val cursor: Cursor[JsObject] = collection.
@@ -76,7 +76,7 @@ class Stylist[T](a: T with RunwayModel[T], preSlug: String = "", dbGen: DbBehavi
   }
 
   def all: Future[List[T]] = {
-    
+
     def collection: JSONCollection = db.collection[JSONCollection](slug)
 
     val cursor: Cursor[JsObject] = collection.

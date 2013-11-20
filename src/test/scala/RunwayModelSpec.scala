@@ -29,7 +29,7 @@ class RunwayModelSpec extends Specification with Mockito{
 
     def getModel = this
 
-    def getId = "an Id"
+    val id = "an Id"
 
     def jsonReads(p: JsValue) = {
       val v = p \ "value1"
