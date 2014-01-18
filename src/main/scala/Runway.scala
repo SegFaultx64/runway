@@ -260,7 +260,7 @@ trait RunwayModelCompanion[T] extends Runnable[T] { self: {def getModel: T with 
 
 object Main {
 
-  def main = {
+  def main(args: Array[String]) = {
     println("This does nothing")
   }
 
