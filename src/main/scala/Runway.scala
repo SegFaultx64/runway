@@ -257,3 +257,11 @@ trait RunwayModelCompanion[T] extends Runnable[T] { self: {def getModel: T with 
   }
 
 }
+
+object Main {
+
+  def main = {
+    println("This does nothing")
+  }
+
+}
