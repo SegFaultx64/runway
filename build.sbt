@@ -17,5 +17,3 @@ libraryDependencies ++= Seq(
 scalacOptions ++= Seq("-feature", "-language:postfixOps")
 
 initialCommands := "import com.traversalsoftware.runway._"
-
-mainClass in (Compile,run) := Some("Main")
