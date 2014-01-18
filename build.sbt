@@ -4,7 +4,7 @@ organization := "com.traversalsoftware"
 
 version := "0.1.0"
 
-scalaVersion := "2.10.0"
+scalaVersion := "2.10"
 
 resolvers += "Typesafe repository releases" at "http://repo.typesafe.com/typesafe/releases/"
 
