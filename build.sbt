@@ -11,7 +11,8 @@ resolvers += "Typesafe repository releases" at "http://repo.typesafe.com/typesaf
 libraryDependencies ++= Seq(
 	"org.reactivemongo" %% "play2-reactivemongo" % "0.10.2",
 	"org.mockito" % "mockito-core" % "1.9.5",
-	"org.specs2" %% "specs2" % "2.2.3" % "test"
+	"org.specs2" %% "specs2" % "2.2.3" % "test",
+	"com.typesafe.play" %% "play" % "2.2.1"
 )
 
 scalacOptions ++= Seq("-feature", "-language:postfixOps")

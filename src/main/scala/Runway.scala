@@ -84,7 +84,7 @@ class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, 
         find(Json.obj()).
         cursor[JsObject]
 
-      val related: Future[List[JsObject]] = cursor.toList
+      val related: Future[List[JsObject]] = cursor.collect[List]()
 
       related.map(fut => {
         fut.map(a => ((a \ "from").as[String] -> (a \ "to").as[String])).toList
@@ -98,7 +98,7 @@ class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, 
         find(Json.obj("from" -> Json.toJson(o().id))).
         cursor[JsObject]
 
-      val related: Future[List[JsObject]] = cursor.toList
+      val related: Future[List[JsObject]] = cursor.collect[List]()
 
       related.flatMap(fut => {
         dummy.find(fut.map(a => (a \ "to").as[String]))
@@ -112,7 +112,7 @@ class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, 
         find(Json.obj("to" -> Json.toJson(o().id))).
         cursor[JsObject]
 
-      val related: Future[List[JsObject]] = cursor.toList
+      val related: Future[List[JsObject]] = cursor.collect[List]()
 
       related.flatMap(fut => {
         dummy.find(fut.map(a => (a \ "from").as[String]))
@@ -126,7 +126,7 @@ class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, 
         find(Json.obj("from" -> Json.toJson(o().id), "to" -> Json.toJson(target))).
         cursor[JsObject]
 
-    val related: Future[List[JsObject]] = cursor.toList
+    val related: Future[List[JsObject]] = cursor.collect[List]()
 
     related.map(fut => {
       (fut.length > 0)
