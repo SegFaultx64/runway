@@ -49,7 +49,7 @@ class Stylist[T](a: T with RunwayModel[T], preSlug: String = "", dbGen: DbBehavi
         find(Json.obj("_id" -> id)).
         cursor[JsObject]
 
-      val futurePersonsList: Future[List[JsObject]] = cursor.toList
+      val futurePersonsList: Future[List[JsObject]] = cursor.collect[List]()
 
       // everything's ok! Let's reply with the array
       futurePersonsList.map(test => {
@@ -65,7 +65,7 @@ class Stylist[T](a: T with RunwayModel[T], preSlug: String = "", dbGen: DbBehavi
         find(Json.obj("_id" -> Json.obj("$in" -> Json.toJson(ids)))).
         cursor[JsObject]
 
-      val futurePersonsList: Future[List[JsObject]] = cursor.toList
+      val futurePersonsList: Future[List[JsObject]] = cursor.collect[List]()
 
       // everything's ok! Let's reply with the array
       futurePersonsList.map(fut => {
@@ -83,7 +83,7 @@ class Stylist[T](a: T with RunwayModel[T], preSlug: String = "", dbGen: DbBehavi
         find(Json.obj()).
         cursor[JsObject]
 
-      val futurePersonsList: Future[List[JsObject]] = cursor.toList
+      val futurePersonsList: Future[List[JsObject]] = cursor.collect[List]()
 
       // everything's ok! Let's reply with the array
       futurePersonsList.map(fut => {
@@ -105,7 +105,7 @@ class Stylist[T](a: T with RunwayModel[T], preSlug: String = "", dbGen: DbBehavi
   def get(query: JsObject, order: JsObject = Json.obj(), limit: Int = 0): Future[List[T]] = {
     def collection: JSONCollection = db.collection[JSONCollection](slug)
 
-    collection.find(query).sort(order).cursor[JsObject].toList.map(fut => {
+    collection.find(query).sort(order).cursor[JsObject].collect[List]().map(fut => {
       val newFuture = fut.map( value => {
           a.jsonReads(value)
       })
