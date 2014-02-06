@@ -182,6 +182,43 @@ class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, 
 
 }
 
+class ManyToEither[A <: RunwayModel[A], B <: RunwayModel[B], C <: RunwayModel[C]](pivot: String, o: A, dummy1: B, dummy2: C)(implicit readsA: Reads[A], writesA: Writes[A], readsB: Reads[B], writesB: Writes[B], readsC: Reads[C], writesC: Writes[C]) {
+
+  def attach(toAttach: Either[B, C]) = {
+    val toAttachId = toAttach match {
+      case Right(a) => Json.obj("Right" -> a().id)
+      case Left(a) => Json.obj("Left" -> a().id)
+    }
+
+    def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
+    val json = Json.obj("from" -> o().id, "to" -> toAttachId)
+    collection.save(json)
+
+  }
+
+  def getRelated(): Future[List[Either[B, C]]] = {
+    def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
+
+    val cursor: Cursor[JsObject] = collection.
+        find(Json.obj("from" -> Json.toJson(o().id))).
+        cursor[JsObject]
+
+      val related: Future[List[JsObject]] = cursor.collect[List]()
+
+      related.flatMap(fut => {
+        Future.sequence(fut.map(a => {
+          val keys = ((a \ "to").as[JsObject]).keys
+          keys.head match {
+            case "Right" => dummy2.find((a \ "to" \ "Right").as[String]).map(res => Right(res.getOrElse(dummy2)))
+            case _ => dummy1.find((a \ "to" \ "Left").as[String]).map(res => Left(res.getOrElse(dummy1)))
+          }
+        }))
+      })
+  }
+
+}
+
+
 class ModelNotFoundException(id: String) extends RuntimeException(id)
 
 trait Jsonable[T] extends Runnable[T]{
