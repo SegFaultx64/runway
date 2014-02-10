@@ -12,7 +12,7 @@ import play.api.libs.json._
 
 import play.api.Play.current
 
-import scala.concurrent.{ Future, ExecutionContext}
+import scala.concurrent.{ Future, ExecutionContext }
 import scala.concurrent.duration._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -35,7 +35,7 @@ case class PartialQuery[T](q: JsObject, tool: Stylist[T], ordering: JsObject = J
   }
 
   def first() = {
-    tool.get(this.q, ordering).map (a => {
+    tool.get(this.q, ordering).map(a ⇒ {
       if (a.length > 0)
         Some(a(0))
       else
@@ -44,7 +44,7 @@ case class PartialQuery[T](q: JsObject, tool: Stylist[T], ordering: JsObject = J
   }
 
   def last() = {
-    tool.get(this.q, ordering, limit).map (a => {
+    tool.get(this.q, ordering, limit).map(a ⇒ {
       if (a.length > 0)
         Some(a.last)
       else
@@ -54,9 +54,9 @@ case class PartialQuery[T](q: JsObject, tool: Stylist[T], ordering: JsObject = J
 
   def orderBy(field: String, order: String = "asc") = {
     order match {
-      case "asc" => PartialQuery(q, tool, Json.obj(field -> Json.toJson(1)), limit)
-      case "desc" => PartialQuery(q, tool, Json.obj(field -> Json.toJson(-1)), limit)
-      case _ => PartialQuery(q, tool, ordering, limit)
+      case "asc"  ⇒ PartialQuery(q, tool, Json.obj(field -> Json.toJson(1)), limit)
+      case "desc" ⇒ PartialQuery(q, tool, Json.obj(field -> Json.toJson(-1)), limit)
+      case _      ⇒ PartialQuery(q, tool, ordering, limit)
     }
   }
 
@@ -71,9 +71,9 @@ case class Backward() extends Direction
 
 class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, dummy: B)(implicit readsA: Reads[A], writesA: Writes[A], readsB: Reads[B], writesB: Writes[B]) {
 
-  var relationshipEvents: Map[String, (A, B) => Unit] = Map empty
+  var relationshipEvents: Map[String, (A, B) ⇒ Unit] = Map empty
 
-  def on(trigger: String, action: ((A, B) => Unit)) = {
+  def on(trigger: String, action: ((A, B) ⇒ Unit)) = {
     relationshipEvents = relationshipEvents.updated(trigger, action);
   }
 
@@ -81,91 +81,88 @@ class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, 
     def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
 
     val cursor: Cursor[JsObject] = collection.
-        find(Json.obj()).
-        cursor[JsObject]
+      find(Json.obj()).
+      cursor[JsObject]
 
-      val related: Future[List[JsObject]] = cursor.collect[List]()
+    val related: Future[List[JsObject]] = cursor.collect[List]()
 
-      related.map(fut => {
-        fut.map(a => ((a \ "from").as[String] -> (a \ "to").as[String])).toList
-      })
+    related.map(fut ⇒ {
+      fut.map(a ⇒ ((a \ "from").as[String] -> (a \ "to").as[String])).toList
+    })
   }
 
   def getRelated(): Future[List[B]] = {
     def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
 
     val cursor: Cursor[JsObject] = collection.
-        find(Json.obj("from" -> Json.toJson(o().id))).
-        cursor[JsObject]
+      find(Json.obj("from" -> Json.toJson(o().id))).
+      cursor[JsObject]
 
-      val related: Future[List[JsObject]] = cursor.collect[List]()
+    val related: Future[List[JsObject]] = cursor.collect[List]()
 
-      related.flatMap(fut => {
-        dummy.find(fut.map(a => (a \ "to").as[String]))
-      })
+    related.flatMap(fut ⇒ {
+      dummy.find(fut.map(a ⇒ (a \ "to").as[String]))
+    })
   }
 
   def getRelatedReverse(): Future[List[B]] = {
     def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
 
     val cursor: Cursor[JsObject] = collection.
-        find(Json.obj("to" -> Json.toJson(o().id))).
-        cursor[JsObject]
+      find(Json.obj("to" -> Json.toJson(o().id))).
+      cursor[JsObject]
 
-      val related: Future[List[JsObject]] = cursor.collect[List]()
+    val related: Future[List[JsObject]] = cursor.collect[List]()
 
-      related.flatMap(fut => {
-        dummy.find(fut.map(a => (a \ "from").as[String]))
-      })
+    related.flatMap(fut ⇒ {
+      dummy.find(fut.map(a ⇒ (a \ "from").as[String]))
+    })
   }
 
   def isRelatedTo(target: String): Future[Boolean] = {
     def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
 
     val cursor: Cursor[JsObject] = collection.
-        find(Json.obj("from" -> Json.toJson(o().id), "to" -> Json.toJson(target))).
-        cursor[JsObject]
+      find(Json.obj("from" -> Json.toJson(o().id), "to" -> Json.toJson(target))).
+      cursor[JsObject]
 
     val related: Future[List[JsObject]] = cursor.collect[List]()
 
-    related.map(fut => {
+    related.map(fut ⇒ {
       (fut.length > 0)
     })
   }
 
   def attach(toAttach: B) = {
     relationshipEvents.get("attach") match {
-      case Some(event) => event(o, toAttach)
-      case None => {}
+      case Some(event) ⇒ event(o, toAttach)
+      case None        ⇒ {}
     }
     def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
     val json = Json.obj("from" -> o().id, "to" -> toAttach().id)
     collection.save(json)
   }
 
-
   def attach(toAttachId: String) = {
     relationshipEvents.get("attach") match {
-      case Some(event) => {
+      case Some(event) ⇒ {
         dummy.find(toAttachId) onSuccess {
-          case Some(a) => event(o, a)
-          case None => {}
+          case Some(a) ⇒ event(o, a)
+          case None    ⇒ {}
         }
       }
-      case None => {}
+      case None ⇒ {}
     }
     def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
     val json = Json.obj("from" -> o().id, "to" -> toAttachId)
     collection.save(json)
   }
 
-
   def detach(toDetach: B) = {
     def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
     val json = Json.obj("from" -> o().id, "to" -> toDetach().id)
     collection.remove(json)
   }
-
 
   def detach(toDetachId: String) = {
     def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
@@ -175,8 +172,8 @@ class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, 
 
   def apply(direction: Direction = Foward()) = {
     direction match {
-      case Foward() => getRelated()
-      case Backward() => getRelatedReverse()
+      case Foward()   ⇒ getRelated()
+      case Backward() ⇒ getRelatedReverse()
     }
   }
 
@@ -186,8 +183,8 @@ class ManyToEither[A <: RunwayModel[A], B <: RunwayModel[B], C <: RunwayModel[C]
 
   def attach(toAttach: Either[B, C]) = {
     val toAttachId = toAttach match {
-      case Right(a) => Json.obj("Right" -> a().id)
-      case Left(a) => Json.obj("Left" -> a().id)
+      case Right(a) ⇒ Json.obj("Right" -> a().id)
+      case Left(a)  ⇒ Json.obj("Left" -> a().id)
     }
 
     def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
@@ -200,28 +197,27 @@ class ManyToEither[A <: RunwayModel[A], B <: RunwayModel[B], C <: RunwayModel[C]
     def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
 
     val cursor: Cursor[JsObject] = collection.
-        find(Json.obj("from" -> Json.toJson(o().id))).
-        cursor[JsObject]
+      find(Json.obj("from" -> Json.toJson(o().id))).
+      cursor[JsObject]
 
-      val related: Future[List[JsObject]] = cursor.collect[List]()
+    val related: Future[List[JsObject]] = cursor.collect[List]()
 
-      related.flatMap(fut => {
-        Future.sequence(fut.map(a => {
-          val keys = ((a \ "to").as[JsObject]).keys
-          keys.head match {
-            case "Right" => dummy2.find((a \ "to" \ "Right").as[String]).map(res => Right(res.getOrElse(dummy2)))
-            case _ => dummy1.find((a \ "to" \ "Left").as[String]).map(res => Left(res.getOrElse(dummy1)))
-          }
-        }))
-      })
+    related.flatMap(fut ⇒ {
+      Future.sequence(fut.map(a ⇒ {
+        val keys = ((a \ "to").as[JsObject]).keys
+        keys.head match {
+          case "Right" ⇒ dummy2.find((a \ "to" \ "Right").as[String]).map(res ⇒ Right(res.getOrElse(dummy2)))
+          case _       ⇒ dummy1.find((a \ "to" \ "Left").as[String]).map(res ⇒ Left(res.getOrElse(dummy1)))
+        }
+      }))
+    })
   }
 
 }
 
-
 class ModelNotFoundException(id: String) extends RuntimeException(id)
 
-trait Jsonable[T] extends Runnable[T]{
+trait Jsonable[T] extends Runnable[T] {
   def jsonReads(p: JsValue): T
   def jsonWrites(): JsValue
   val id: String
@@ -239,10 +235,10 @@ trait Runnable[T] {
   }
 
   def findOrFail(id: String): Future[Option[T]] = {
-    tool.find(id: String).map(f => {
+    tool.find(id: String).map(f ⇒ {
       f match {
-        case Some(a) => Some(a)
-        case None    => throw new ModelNotFoundException(id)
+        case Some(a) ⇒ Some(a)
+        case None    ⇒ throw new ModelNotFoundException(id)
       }
     })
   }
@@ -252,15 +248,15 @@ trait Runnable[T] {
   def where(field: String, value: JsValue) = tool.where(field: String, value: JsValue)
 }
 
-trait RunwayModel[T] extends Jsonable[T]{ self: T =>
+trait RunwayModel[T] extends Jsonable[T] { self: T ⇒
 
   def getModel = self
 
   val tool = new Stylist[T](getModel)
 
-  var elegantEvents: Map[String, (RunwayModel[T] with T) => Unit] = Map empty
+  var elegantEvents: Map[String, (RunwayModel[T] with T) ⇒ Unit] = Map empty
 
-  def on(trigger: String, action: (RunwayModel[T] with T) => Unit) = {
+  def on(trigger: String, action: (RunwayModel[T] with T) ⇒ Unit) = {
     elegantEvents = elegantEvents.updated(trigger, action);
   }
 
@@ -268,14 +264,14 @@ trait RunwayModel[T] extends Jsonable[T]{ self: T =>
 
   def save() {
     elegantEvents.get("save") match {
-      case Some(event) => event(getModel)
-      case None => {}
+      case Some(event) ⇒ event(getModel)
+      case None        ⇒ {}
     }
     tool.save(getModel.id)
   }
 }
 
-trait RunwayModelCompanion[T] extends Runnable[T] { self: {def getModel: T with RunwayModel[T]} =>
+trait RunwayModelCompanion[T] extends Runnable[T] { self: { def getModel: T with RunwayModel[T] } ⇒
 
   val tool = new Stylist[T](self.getModel, getSlug)
 

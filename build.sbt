@@ -1,3 +1,5 @@
+import scalariform.formatter.preferences._
+
 name := "Runway"
 
 organization := "com.traversalsoftware"
@@ -18,3 +20,10 @@ libraryDependencies ++= Seq(
 scalacOptions ++= Seq("-feature", "-language:postfixOps")
 
 initialCommands := "import com.traversalsoftware.runway._"
+
+ scalariformSettings
+
+  ScalariformKeys.preferences := ScalariformKeys.preferences.value
+    .setPreference(AlignSingleLineCaseStatements, true)
+    .setPreference(AlignParameters, true)
+    .setPreference(RewriteArrowSymbols, true)
