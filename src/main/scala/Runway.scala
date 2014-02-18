@@ -177,6 +177,12 @@ class ManyToMany[A <: RunwayModel[A], B <: RunwayModel[B]](pivot: String, o: A, 
     }
   }
 
+  def clean = {
+    def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
+    val json = Json.obj("from" -> o().id)
+    collection.remove(json)
+  }
+
 }
 
 class ManyToEither[A <: RunwayModel[A], B <: RunwayModel[B], C <: RunwayModel[C]](pivot: String, o: A, dummy1: B, dummy2: C)(implicit readsA: Reads[A], writesA: Writes[A], readsB: Reads[B], writesB: Writes[B], readsC: Reads[C], writesC: Writes[C]) {
@@ -211,6 +217,12 @@ class ManyToEither[A <: RunwayModel[A], B <: RunwayModel[B], C <: RunwayModel[C]
         }
       }))
     })
+  }
+
+  def clean = {
+    def collection: JSONCollection = ReactiveMongoPlugin.db.collection[JSONCollection](pivot)
+    val json = Json.obj("from" -> o().id)
+    collection.remove(json)
   }
 
 }
