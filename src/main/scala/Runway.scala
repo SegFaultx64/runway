@@ -285,6 +285,8 @@ trait RunwayModel[T] extends Jsonable[T] { self: T ⇒
 
 trait RunwayModelCompanion[T] extends Runnable[T] { self: { def getModel: T with RunwayModel[T] } ⇒
 
+  implicit val instance = self.getModel
+
   val tool = new Stylist[T](self.getModel, getSlug)
 
   def getSlug = {
