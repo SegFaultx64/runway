@@ -260,22 +260,26 @@ trait Runnable[T] {
   def where(field: String, value: JsValue) = tool.where(field: String, value: JsValue)
 }
 
+class Events[T](var events: Map[String, (RunwayModel[T] with T) ⇒ Unit]) {
+
+}
+
 trait RunwayModel[T] extends Jsonable[T] { self: T ⇒
 
   def getModel = self
 
   val tool = new Stylist[T](getModel)
 
-  var elegantEvents: Map[String, (RunwayModel[T] with T) ⇒ Unit] = Map empty
+  val elegantEvents: Events[T] = new Events(Map empty)
 
   def on(trigger: String, action: (RunwayModel[T] with T) ⇒ Unit) = {
-    elegantEvents = elegantEvents.updated(trigger, action);
+    elegantEvents.events = elegantEvents.events.updated(trigger, action);
   }
 
   def apply() = self.getModel
 
   def save() {
-    elegantEvents.get("save") match {
+    elegantEvents.events.get("save") match {
       case Some(event) ⇒ event(getModel)
       case None        ⇒ {}
     }
