@@ -186,16 +186,9 @@ class ManyToEither[A <: RunwayModel[A], B <: RunwayModel[B], C <: RunwayModel[C]
 class ModelNotFoundException(id: String) extends RuntimeException(id)
 
 trait Jsonable[T] extends Runnable[T] { self: T ⇒
-  val reads: Reads[T]
-  val writes: Writes[T]
+  def jsonReads(p: JsValue): T
+  def jsonWrites: JsValue
 
-  def jsonReads(p: JsValue) = {
-    p.as[T](reads)
-  }
-
-  def jsonWrites: JsValue = {
-    Json.toJson(this)(writes)
-  }
   val id: String
 }
 
