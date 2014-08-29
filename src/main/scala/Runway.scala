@@ -21,50 +21,6 @@ import scala.language.reflectiveCalls
 
 import scala.reflect.runtime.universe._
 
-case class PartialQuery[T](q: JsObject, tool: Stylist[T], ordering: JsObject = Json.obj(), limit: Int = 0) {
-  def where(field: String, value: JsValue) = {
-    PartialQuery(q + (field -> value), tool)
-  }
-
-  def get() = {
-    tool.get(this.q, ordering, limit)
-  }
-
-  def delete() = {
-    tool.delete(this.q)
-  }
-
-  def first() = {
-    tool.get(this.q, ordering).map(a ⇒ {
-      if (a.length > 0)
-        Some(a(0))
-      else
-        None
-    })
-  }
-
-  def last() = {
-    tool.get(this.q, ordering, limit).map(a ⇒ {
-      if (a.length > 0)
-        Some(a.last)
-      else
-        None
-    })
-  }
-
-  def orderBy(field: String, order: String = "asc") = {
-    order match {
-      case "asc"  ⇒ PartialQuery(q, tool, Json.obj(field -> Json.toJson(1)), limit)
-      case "desc" ⇒ PartialQuery(q, tool, Json.obj(field -> Json.toJson(-1)), limit)
-      case _      ⇒ PartialQuery(q, tool, ordering, limit)
-    }
-  }
-
-  def limit(limit: Int) = {
-    PartialQuery(q, tool, ordering, limit)
-  }
-}
-
 sealed abstract class Direction
 case class Foward() extends Direction
 case class Backward() extends Direction
@@ -229,9 +185,17 @@ class ManyToEither[A <: RunwayModel[A], B <: RunwayModel[B], C <: RunwayModel[C]
 
 class ModelNotFoundException(id: String) extends RuntimeException(id)
 
-trait Jsonable[T] extends Runnable[T] {
-  def jsonReads(p: JsValue): T
-  def jsonWrites(): JsValue
+trait Jsonable[T] extends Runnable[T] { self: T ⇒
+  val reads: Reads[T]
+  val writes: Writes[T]
+
+  def jsonReads(p: JsValue) = {
+    p.as[T](reads)
+  }
+
+  def jsonWrites: JsValue = {
+    Json.toJson(this)(writes)
+  }
   val id: String
 }
 
